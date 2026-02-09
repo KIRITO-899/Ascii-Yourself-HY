@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { AsciiOptions } from '../types';
 import { getAsciiChar } from '../utils/asciiConverter';
-import { playStartupSound, playScanSound } from '../utils/soundEffects';
+import { playStartupSound, playScanSound, startAmbientHum, stopAmbientHum } from '../utils/soundEffects';
 import { ScanEye, Camera } from 'lucide-react';
 
 interface AsciiCanvasProps {
@@ -37,6 +37,8 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
           
           // Play sci-fi startup sound when camera is ready
           playStartupSound();
+          // Start the continuous background hum
+          startAmbientHum();
         }
       } catch (err) {
         console.error("Error accessing camera:", err);
@@ -50,7 +52,7 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      // We don't cancel animation frame here anymore because it's managed by the other useEffect
+      stopAmbientHum();
     };
   }, []);
 

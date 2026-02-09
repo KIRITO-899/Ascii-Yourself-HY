@@ -22,6 +22,77 @@ const ensureContext = async () => {
     return ctx;
 };
 
+let ambientNodes: { osc: OscillatorNode, gain: GainNode, lfo: OscillatorNode } | null = null;
+
+export const startAmbientHum = async () => {
+    if (ambientNodes) return; // Already running
+    
+    try {
+        const ctx = await ensureContext();
+        
+        const osc = ctx.createOscillator();
+        const lfo = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain = ctx.createGain();
+        const lfoGain = ctx.createGain();
+
+        // Signal flow: Osc -> Filter -> Gain -> Out
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        // LFO flow: LFO -> LFOGain -> Filter.detune
+        lfo.connect(lfoGain);
+        lfoGain.connect(filter.detune);
+
+        // Settings - Dark Sci-Fi Drone
+        osc.type = 'sawtooth';
+        osc.frequency.value = 55; // 55Hz (Low A)
+
+        filter.type = 'lowpass';
+        filter.frequency.value = 120;
+        filter.Q.value = 6;
+
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.15; // Slow cycle (approx 7s)
+        lfoGain.gain.value = 300; // Modulate filter cutoff/detune significantly
+
+        gain.gain.value = 0.03; // Very subtle background presence
+
+        osc.start();
+        lfo.start();
+
+        ambientNodes = { osc, gain, lfo };
+    } catch (e) {
+        console.error("Failed to start ambient hum", e);
+    }
+};
+
+export const stopAmbientHum = () => {
+    if (ambientNodes) {
+        const { osc, gain, lfo } = ambientNodes;
+        // Ramp down to avoid popping
+        const ctx = getContext();
+        const t = ctx.currentTime;
+        
+        try {
+            gain.gain.setTargetAtTime(0, t, 0.1);
+            
+            setTimeout(() => {
+                osc.stop();
+                lfo.stop();
+                osc.disconnect();
+                lfo.disconnect();
+                gain.disconnect();
+            }, 200);
+        } catch (e) {
+            // Context might be closed
+        }
+        
+        ambientNodes = null;
+    }
+};
+
 export const playStartupSound = async () => {
   try {
     const ctx = await ensureContext();
