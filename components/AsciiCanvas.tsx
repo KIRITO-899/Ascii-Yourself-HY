@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { AsciiOptions } from '../types';
 import { getAsciiChar } from '../utils/asciiConverter';
+import { playStartupSound, playScanSound } from '../utils/soundEffects';
 import { ScanEye, Camera } from 'lucide-react';
 
 interface AsciiCanvasProps {
@@ -33,6 +34,9 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
           videoRef.current.srcObject = stream;
           // Ensure video actually plays
           await videoRef.current.play().catch(e => console.error("Play error:", e));
+          
+          // Play sci-fi startup sound when camera is ready
+          playStartupSound();
         }
       } catch (err) {
         console.error("Error accessing camera:", err);
@@ -46,9 +50,7 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      // We don't cancel animation frame here anymore because it's managed by the other useEffect
     };
   }, []);
 
@@ -73,7 +75,7 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
   }, []);
 
   useEffect(() => {
-    // Reset smoothing buffer when dimensions likely change (implicitly handled by length check, but good to reset on option change if needed)
+    // Reset smoothing buffer when dimensions likely change
     prevFrameRef.current = null;
   }, [options.fontSize]);
 
@@ -217,10 +219,18 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
     };
 
     animationRef.current = requestAnimationFrame(renderLoop);
+
+    // Cleanup function to prevent zombie loops when options change
+    return () => {
+        if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current);
+        }
+    };
   }, [options]);
 
   const handleCaptureClick = () => {
     if (canvasRef.current) {
+        playScanSound();
         // We capture the visible canvas (The ASCII Art)
         const dataUrl = canvasRef.current.toDataURL('image/png');
         onCapture(dataUrl);
@@ -229,6 +239,7 @@ export const AsciiCanvas: React.FC<AsciiCanvasProps> = ({ options, onCapture }) 
 
   const handleScreenshotClick = () => {
     if (canvasRef.current) {
+      playScanSound();
       const dataUrl = canvasRef.current.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = dataUrl;

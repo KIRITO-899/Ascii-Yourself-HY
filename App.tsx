@@ -5,6 +5,7 @@ import { AnalysisModal } from './components/AnalysisModal';
 import { AsciiOptions, AnalysisResult } from './types';
 import { analyzeImage } from './services/geminiService';
 import { Camera, Terminal, Zap, ScanEye } from 'lucide-react';
+import { playAnalysisStartSound, playAnalysisCompleteSound } from './utils/soundEffects';
 
 const App: React.FC = () => {
   const [options, setOptions] = useState<AsciiOptions>({
@@ -24,10 +25,12 @@ const App: React.FC = () => {
     setIsAnalyzing(true);
     setAnalysisResult(null);
     setIsModalOpen(true);
+    playAnalysisStartSound();
 
     try {
       const result = await analyzeImage(imageData);
       setAnalysisResult(result);
+      playAnalysisCompleteSound();
     } catch (error) {
       console.error("Analysis failed:", error);
       setAnalysisResult({

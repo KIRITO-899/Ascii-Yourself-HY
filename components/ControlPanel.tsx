@@ -1,6 +1,7 @@
 import React from 'react';
 import { AsciiOptions, DENSITY_MAPS } from '../types';
 import { Sliders, Monitor, Type, Palette } from 'lucide-react';
+import { playButtonSound } from '../utils/soundEffects';
 
 interface ControlPanelProps {
   options: AsciiOptions;
@@ -11,6 +12,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ options, setOptions 
   const handleChange = (key: keyof AsciiOptions, value: any) => {
     setOptions(prev => ({ ...prev, [key]: value }));
   };
+
+  const handleModeChange = (key: keyof AsciiOptions, value: any) => {
+      playButtonSound();
+      handleChange(key, value);
+  }
 
   return (
     <div className="absolute bottom-0 w-full bg-black/80 border-t border-green-900/50 backdrop-blur-sm p-4 z-30 transition-all duration-300">
@@ -76,7 +82,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ options, setOptions 
                 {(['matrix', 'bw', 'retro', 'color'] as const).map(mode => (
                     <button
                         key={mode}
-                        onClick={() => handleChange('colorMode', mode)}
+                        onClick={() => handleModeChange('colorMode', mode)}
                         className={`px-2 py-1 border ${options.colorMode === mode ? 'bg-green-500 text-black border-green-500' : 'bg-transparent border-green-800 text-green-700 hover:border-green-500'} text-[10px] uppercase transition-colors`}
                     >
                         {mode}
@@ -95,7 +101,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ options, setOptions 
                 {(Object.keys(DENSITY_MAPS) as Array<keyof typeof DENSITY_MAPS>).map(mode => (
                     <button
                         key={mode}
-                        onClick={() => handleChange('density', mode)}
+                        onClick={() => handleModeChange('density', mode)}
                         className={`px-2 py-1 border ${options.density === mode ? 'bg-green-500 text-black border-green-500' : 'bg-transparent border-green-800 text-green-700 hover:border-green-500'} text-[10px] uppercase transition-colors`}
                     >
                         {mode}
