@@ -2,16 +2,18 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from '../types';
 
 const getClient = () => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API Key not found in environment variables");
+    throw new Error("API Key not found in environment variables. Ensure GEMINI_API_KEY is set.");
   }
+  // Initialize with the correct options object
   return new GoogleGenAI({ apiKey });
 };
 
 export const analyzeImage = async (base64Image: string): Promise<AnalysisResult> => {
   try {
-    const ai = getClient();
+    const genAI = getClient();
+    
     // Remove the data URL prefix if present for the API call
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
 
@@ -25,21 +27,24 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
       Respond in JSON format.
     `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [
-          { inlineData: { mimeType: 'image/png', data: cleanBase64 } },
-          { text: prompt }
-        ]
-      },
+    const response = await genAI.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: "image/png", data: cleanBase64 } }
+          ]
+        }
+      ],
       config: {
-        responseMimeType: 'application/json',
+        responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             description: { type: Type.STRING, description: "A robotic, 2-sentence analysis of the subject." },
-            threatLevel: { type: Type.STRING, description: "The calculated threat level." },
+            threatLevel: { type: Type.STRING, description: "The calculated threat level (LOW, MODERATE, CRITICAL, or UNKNOWN)." },
             tags: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of 3-5 keywords identifying features." }
           },
           required: ["description", "threatLevel", "tags"]
@@ -55,9 +60,9 @@ export const analyzeImage = async (base64Image: string): Promise<AnalysisResult>
   } catch (error) {
     console.error("Gemini API Error:", error);
     return {
-      description: "ANALYSIS FAILED. UNABLE TO PROCESS VISUAL DATA. RETRY INITIATED.",
-      threatLevel: "ERROR",
-      tags: ["ERROR", "NO_DATA"]
+      description: "ANALYSIS FAILED. UNABLE TO PROCESS VISUAL DATA. SYSTEM ERROR.",
+      threatLevel: "UNKNOWN",
+      tags: ["ERROR", "OFFLINE"]
     };
   }
 };
